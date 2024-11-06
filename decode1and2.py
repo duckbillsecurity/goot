@@ -37,6 +37,7 @@ def ConvertVarsToDict(var_matches):
         # Ensure both var_name and value are present
         if var_name and value:
             var_dict[var_name] = value
+            print(f"Variable added to dictionary: {var_name} = {value}")
     return var_dict
 
 def convertConcatToString(concat_matches, var_dict):
@@ -61,14 +62,17 @@ def convertConcatToString(concat_matches, var_dict):
             current_concat = ''
             for item in expression.split('+'):
                 item = item.strip()
-                # Look up each variable in `var_dict`, continue if not found
-                current_concat += var_dict.get(item, '')
+                # Look up each variable in `var_dict`, skip if not found
+                if item in var_dict:
+                    current_concat += var_dict[item]
+                else:
+                    print(f"Warning: {item} not found in variable dictionary")
 
-            # Update `var_dict` with the resolved value
-            var_dict[var_name] = current_concat
-
-            # Update concatenated_result to the last concatenated value
-            concatenated_result = current_concat
+            # Update `var_dict` with the resolved value if it's not empty
+            if current_concat:
+                var_dict[var_name] = current_concat
+                concatenated_result = current_concat
+                print(f"Concatenated variable: {var_name} = {current_concat}")
         except ValueError:
             print(f"Error processing match: {match}")
             continue
@@ -104,9 +108,15 @@ def gootDecode(file_path):
 
     # Step 2b: Find all concatenated lines that need to be resolved
     concat_matches = concat_pattern.findall(file_content)
-
+    if not concat_matches:
+        print("No concatenation patterns found.")
+    
     # Step 3: Concatenate variables to form a partially decoded text
     concatenated_text = convertConcatToString(concat_matches, var_dict)
+    if concatenated_text:
+        print("Concatenation successful.")
+    else:
+        print("Concatenation resulted in empty output.")
 
     # Save concatenated output to a file
     with open('Round1Decoded.js_', 'w') as f:
@@ -114,6 +124,10 @@ def gootDecode(file_path):
 
     # Step 4: First round of decoding
     round1_result = decodeString(concatenated_text)
+    if round1_result:
+        print("First round of decoding successful.")
+    else:
+        print("First round of decoding resulted in empty output.")
 
     # Save the first decoded output
     with open('Round2Decoded.js_', 'w') as f:
@@ -121,6 +135,10 @@ def gootDecode(file_path):
 
     # Step 5: Second round of decoding on the result from the first round
     round2_result = decodeString(round1_result)
+    if round2_result:
+        print("Second round of decoding successful.")
+    else:
+        print("Second round of decoding resulted in empty output.")
 
     # Save the final decoded output
     with open('FinalDecoded.js_', 'w') as f:
