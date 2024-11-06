@@ -13,44 +13,65 @@ def getVariableAndConcatPatterns():
     Returns the regular expression patterns to find variables and concatenated lines.
     These patterns are tailored to GootLoader Variant 2.1 and higher.
     """
-    # Pattern for extracting variable assignments
+    # Pattern for extracting variable assignments (e.g., var_name = 'value';)
     var_pattern = re.compile(
-        r"""(?:^([a-zA-Z0-9_]+)\s*=\s*['"](.*?)['"]\s*;)""",
+        r"""^([a-zA-Z0-9_]+)\s*=\s*['"](.*?)['"]\s*;""",
         re.MULTILINE
     )
 
-    # Pattern for detecting concatenations involving multiple variables
+    # Pattern for detecting concatenations involving multiple variables (e.g., var_name = var1 + var2 + ...;)
     concat_pattern = re.compile(
-        r"""(?:^([a-zA-Z0-9_]+)\s*=\s*(?:[a-zA-Z0-9_]+\s*\+\s*)+[a-zA-Z0-9_]+;)""",
+        r"""^([a-zA-Z0-9_]+)\s*=\s*(?:[a-zA-Z0-9_]+\s*\+\s*)+[a-zA-Z0-9_]+\s*;""",
         re.MULTILINE
     )
 
     return var_pattern, concat_pattern
+
+def ConvertVarsToDict(var_matches):
+    """
+    Converts matched variables into a dictionary where each key is a variable name
+    and the value is the assigned string. Only valid matches are processed.
+    """
+    var_dict = {}
+    for var_name, value in var_matches:
+        # Ensure both var_name and value are present
+        if var_name and value:
+            var_dict[var_name] = value
+    return var_dict
 
 def convertConcatToString(concat_matches, var_dict):
     """
     Concatenates variables based on the obfuscated pattern. Joins multiple concatenated 
     strings by looking up variable values in `var_dict` and assembling them into one string.
     """
-    decoded_text = ''
+    concatenated_value = ''
 
     for match in concat_matches:
-        # Split on '=' to separate variable name from its concatenated values
-        var_name, expression = match.split('=')
-        var_name = var_name.strip()
-        expression = expression.strip()
-        
-        # Resolve each variable in the expression using `var_dict`
-        concatenated_value = ''
-        for item in expression.split('+'):
-            item = item.strip()
-            concatenated_value += var_dict.get(item, '')
+        # Attempt to split on '=' to separate variable name from its concatenated values
+        if '=' not in match:
+            print(f"Skipping unexpected match format: {match}")
+            continue
 
-        # Update `var_dict` with the resolved value
-        var_dict[var_name] = concatenated_value
+        try:
+            var_name, expression = match.split('=')
+            var_name = var_name.strip()
+            expression = expression.strip()
+
+            # Resolve each variable in the expression using `var_dict`
+            concatenated_result = ''
+            for item in expression.split('+'):
+                item = item.strip()
+                # Look up each variable in `var_dict`, continue if not found
+                concatenated_result += var_dict.get(item, '')
+
+            # Update `var_dict` with the resolved value
+            var_dict[var_name] = concatenated_result
+        except ValueError:
+            print(f"Error processing match: {match}")
+            continue
 
     # The last resolved variable should contain the final decoded concatenated string
-    return concatenated_value
+    return concatenated_result
 
 def decodeString(encoded_text):
     """
@@ -77,7 +98,7 @@ def gootDecode(file_path):
 
     # Step 2a: Find all variable assignments and store them in a dictionary
     var_matches = var_pattern.findall(file_content)
-    var_dict = {name: value for name, value in var_matches}
+    var_dict = ConvertVarsToDict(var_matches)
 
     # Step 2b: Find all concatenated lines that need to be resolved
     concat_matches = concat_pattern.findall(file_content)
@@ -96,7 +117,7 @@ def gootDecode(file_path):
     with open('Round2Decoded.js_', 'w') as f:
         f.write(round1_result)
 
-    # Step 5: Second round of decoding
+    # Step 5: Second round of decoding on the result from the first round
     round2_result = decodeString(round1_result)
 
     # Save the final decoded output
