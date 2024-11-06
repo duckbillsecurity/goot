@@ -44,7 +44,7 @@ def convertConcatToString(concat_matches, var_dict):
     Concatenates variables based on the obfuscated pattern. Joins multiple concatenated 
     strings by looking up variable values in `var_dict` and assembling them into one string.
     """
-    concatenated_value = ''
+    concatenated_result = ''  # Initialize to avoid UnboundLocalError
 
     for match in concat_matches:
         # Attempt to split on '=' to separate variable name from its concatenated values
@@ -58,19 +58,21 @@ def convertConcatToString(concat_matches, var_dict):
             expression = expression.strip()
 
             # Resolve each variable in the expression using `var_dict`
-            concatenated_result = ''
+            current_concat = ''
             for item in expression.split('+'):
                 item = item.strip()
                 # Look up each variable in `var_dict`, continue if not found
-                concatenated_result += var_dict.get(item, '')
+                current_concat += var_dict.get(item, '')
 
             # Update `var_dict` with the resolved value
-            var_dict[var_name] = concatenated_result
+            var_dict[var_name] = current_concat
+
+            # Update concatenated_result to the last concatenated value
+            concatenated_result = current_concat
         except ValueError:
             print(f"Error processing match: {match}")
             continue
 
-    # The last resolved variable should contain the final decoded concatenated string
     return concatenated_result
 
 def decodeString(encoded_text):
