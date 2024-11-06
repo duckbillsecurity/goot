@@ -81,19 +81,14 @@ def gootDecode(path):
     Obfuscated1Text = convertConcatToString(concat_matches, var_dict)
 
     round1Result = decodeString(Obfuscated1Text)
-    # Debug print to check if round1Result has meaningful data
-    if not round1Result:
-        print("Warning: First round of decoding produced empty result.")
-    
-    # Extracting match safely with check
+    # Ensure matches are found, otherwise print a message and exit
     code_match_pattern = r"(?<!\\)(?:\\\\)*'([^'\\]*(?:\\.[^'\\]*)*)'"
     matches = re.findall(code_match_pattern, round1Result)
-    if matches:
-        CodeMatch = matches[0]
-    else:
-        print("Warning: No matches found for CodeMatch in round1Result.")
-        CodeMatch = ''
+    if not matches:
+        print("No matches found in round1Result. Please check the decoding pattern.")
+        return
 
+    CodeMatch = matches[0]
     round2Result = decodeString(CodeMatch.encode('raw_unicode_escape').decode('unicode_escape'))
     round2Code, round2FileName = parseRound2Data(round2Result, round1Result, var_dict, gootloader3sample)
 
